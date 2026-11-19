@@ -40,7 +40,8 @@ class Solution {
 
         while (!queue.isEmpty()) {
             int current = queue.poll();
-            order[index]++;
+            order[index] = current;
+            index++;
 
             for (int nextCourse : graph.get(current)) {
                 indegree[nextCourse]--;
