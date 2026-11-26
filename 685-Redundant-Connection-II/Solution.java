@@ -1,7 +1,7 @@
 /*
  * LeetCode 685 - Redundant Connection II
- * Approach: Detect a two-parent conflict, then use Union-Find
- * to identify the edge that must be removed.
+ * Approach: Handle a two-parent conflict, then use Union-Find
+ * to detect a directed cycle in the remaining edges.
  * Time: O(n * alpha(n)) | Space: O(n)
  */
 class Solution {
@@ -9,46 +9,27 @@ class Solution {
 
     public int[] findRedundantDirectedConnection(int[][] edges) {
         int n = edges.length;
-        int[] firstParentEdge = new int[n + 1];
-        int[] secondParentEdge = new int[n + 1];
+        int[] incomingEdge = new int[n + 1];
 
-        // Step 1: Find a node with two incoming edges, if one exists.
+        int earlierEdge = -1;
+        int laterEdge = -1;
+
+        // Step 1: Check whether a node has two incoming edges.
         for (int i = 0; i < n; i++) {
-            int from = edges[i][0];
             int to = edges[i][1];
 
-            if (secondParentEdge[to] != 0) {
-                // This is the second incoming edge to 'to'.
-                // Store its index; remember the earlier edge index too.
-                return checkWithTwoParentEdges(edges, firstParentEdge[to], i);
-            }
-
-            if (firstParentEdge[to] != 0) {
-                secondParentEdge[to] = i;
+            if (incomingEdge[to] == 0) {
+                // Store index + 1 because 0 means no edge was stored.
+                incomingEdge[to] = i + 1;
             } else {
-                firstParentEdge[to] = i;
+                earlierEdge = incomingEdge[to] - 1;
+                laterEdge = i;
+                break;
             }
         }
 
-        // No node has two parents. Find the edge that creates a cycle.
-        return findCycleEdge(edges, -1);
-    }
-
-    private int[] checkWithTwoParentEdges(int[][] edges, int earlierIndex,
-                                           int laterIndex) {
-        // First, skip the later edge. If there is no cycle, it is redundant.
-        int[] result = findCycleEdge(edges, laterIndex);
-
-        if (result.length == 0) {
-            return edges[laterIndex];
-        }
-
-        // Otherwise, the earlier edge must be removed.
-        return edges[earlierIndex];
-    }
-
-    private int[] findCycleEdge(int[][] edges, int skippedIndex) {
-        int n = edges.length;
+        // Step 2: Run Union-Find, skipping the later edge if there
+        // was a two-parent conflict.
         parent = new int[n + 1];
 
         for (int i = 1; i <= n; i++) {
@@ -56,7 +37,7 @@ class Solution {
         }
 
         for (int i = 0; i < n; i++) {
-            if (i == skippedIndex) {
+            if (i == laterEdge) {
                 continue;
             }
 
@@ -67,13 +48,17 @@ class Solution {
             int rootTo = find(to);
 
             if (rootFrom == rootTo) {
+                if (earlierEdge != -1) {
+                    return edges[earlierEdge];
+                }
+
                 return edges[i];
             }
 
             parent[rootTo] = rootFrom;
         }
 
-        return new int[0];
+        return edges[laterEdge];
     }
 
     private int find(int node) {
